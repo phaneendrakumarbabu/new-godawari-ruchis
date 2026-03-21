@@ -59,8 +59,8 @@ interface StoreContextType {
   removeFromCart: (itemId: string) => void;
   updateCartQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
-  placeOrder: (mobileNumber: string, paymentStatus: "Paid" | "Cash") => Promise<Order | null>;
-  getOrdersByMobile: (mobile: string) => Promise<Order[]>;
+  placeOrder: (mobileNumber: string, paymentStatus: "Paid" | "Cash") => Order;
+  getOrdersByMobile: (mobile: string) => Order[];
   toggleAvailability: (itemId: string) => void;
   addMenuItem: (item: Omit<MenuItem, "id">) => void;
   updateOrderStatus: (orderID: string, status: Order["orderStatus"]) => void;
@@ -79,33 +79,39 @@ export const useStore = () => {
 let orderCounter = 1;
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(DEFAULT_ITEMS);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
+    const saved = localStorage.getItem("tog-menu");
+    if (saved) {
+      const parsed = JSON.parse(saved) as MenuItem[];
+      // Re-map default item images from imports (localStorage can't store blob URLs)
+      const defaultMap = new Map(DEFAULT_ITEMS.map((d) => [d.id, d.imageURL]));
+      return parsed.map((item) => ({
+        ...item,
+        imageURL: defaultMap.get(item.id) || item.imageURL,
+      }));
+    }
+    return DEFAULT_ITEMS;
+  });
+
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+
+  const [orders, setOrders] = useState<Order[]>(() => {
+    const saved = localStorage.getItem("tog-orders");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      orderCounter = parsed.length + 1;
+      return parsed;
+    }
+    return [];
+  });
 
   useEffect(() => {
-    const fetchMenu = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/api/products");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.length > 0) {
-            setMenuItems(data.map((item: any) => ({
-              id: item.id,
-              name: item.name,
-              price: item.price,
-              imageURL: item.imageUrl || getFoodImageURL(item.name),
-              isAvailable: true,
-              category: item.category
-            })));
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch menu:", err);
-      }
-    };
-    fetchMenu();
-  }, []);
+    localStorage.setItem("tog-menu", JSON.stringify(menuItems));
+  }, [menuItems]);
+
+  useEffect(() => {
+    localStorage.setItem("tog-orders", JSON.stringify(orders));
+  }, [orders]);
 
   const addToCart = (item: MenuItem) => {
     setCart((prev) => {
@@ -124,74 +130,23 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = () => setCart([]);
 
-  const placeOrder = async (mobileNumber: string, paymentStatus: "Paid" | "Cash") => {
-    const orderData = {
-      customerId: mobileNumber,
+  const placeOrder = (mobileNumber: string, paymentStatus: "Paid" | "Cash") => {
+    const order: Order = {
+      orderID: `#TOG-${String(orderCounter).padStart(2, "0")}`,
+      mobileNumber,
+      items: [...cart],
       totalAmount: cart.reduce((sum, c) => sum + c.price * c.quantity, 0),
-      items: cart.map(c => ({
-        productId: c.id,
-        name: c.name,
-        price: c.price,
-        quantity: c.quantity
-      }))
+      paymentStatus: paymentStatus === "Cash" ? "Pending" : "Paid",
+      timestamp: Date.now(),
+      orderStatus: "New",
     };
-
-    try {
-      const res = await fetch("http://localhost:5000/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData)
-      });
-      
-      if (res.ok) {
-        const savedOrder = await res.json();
-        const newOrder: Order = {
-          orderID: savedOrder.id,
-          mobileNumber: savedOrder.customerId,
-          items: [...cart],
-          totalAmount: savedOrder.totalAmount,
-          paymentStatus: paymentStatus === "Cash" ? "Pending" : "Paid",
-          timestamp: new Date(savedOrder.createdAt).getTime(),
-          orderStatus: "New"
-        };
-        setOrders(prev => [newOrder, ...prev]);
-        clearCart();
-        return newOrder;
-      }
-    } catch (err) {
-      console.error("Failed to place order:", err);
-    }
-    return null;
+    orderCounter++;
+    setOrders((prev) => [order, ...prev]);
+    clearCart();
+    return order;
   };
 
-  const getOrdersByMobile = async (mobile: string) => {
-    try {
-      const res = await fetch(`http://localhost:5000/api/orders/${mobile}`);
-      if (res.ok) {
-        const data = await res.json();
-        const mappedOrders = data.map((o: any) => ({
-          orderID: o.id,
-          mobileNumber: o.customerId,
-          items: o.items.map((i: any) => ({
-            id: i.productId,
-            name: i.name,
-            price: i.price,
-            quantity: i.quantity,
-            imageURL: getFoodImageURL(i.name),
-          })),
-          totalAmount: o.totalAmount,
-          paymentStatus: "Paid",
-          timestamp: new Date(o.createdAt).getTime(),
-          orderStatus: o.status === "pending" ? "New" : (o.status === "processing" ? "Preparing" : "Completed")
-        }));
-        setOrders(mappedOrders);
-        return mappedOrders;
-      }
-    } catch (err) {
-      console.error("Failed to fetch orders:", err);
-    }
-    return [];
-  };
+  const getOrdersByMobile = (mobile: string) => orders.filter((o) => o.mobileNumber === mobile);
 
   const toggleAvailability = (itemId: string) =>
     setMenuItems((prev) => prev.map((m) => m.id === itemId ? { ...m, isAvailable: !m.isAvailable } : m));

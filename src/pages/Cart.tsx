@@ -16,7 +16,7 @@ const Cart = () => {
 
   const total = cart.reduce((s, c) => s + c.price * c.quantity, 0);
 
-  const handleOrder = async (paymentType: "Paid" | "Cash") => {
+  const handleOrder = (paymentType: "Paid" | "Cash") => {
     if (!/^\d{10}$/.test(mobile)) {
       toast.error("Please enter a valid 10-digit mobile number");
       return;
@@ -25,13 +25,9 @@ const Cart = () => {
       toast.error("Your cart is empty");
       return;
     }
-    const order = await placeOrder(mobile, paymentType);
-    if (order) {
-      setReceipt(order);
-      toast.success(`Order ${order.orderID} placed!`);
-    } else {
-      toast.error("Failed to place order. Please try again.");
-    }
+    const order = placeOrder(mobile, paymentType);
+    setReceipt(order);
+    toast.success(`Order ${order.orderID} placed!`);
   };
 
   if (receipt) {
