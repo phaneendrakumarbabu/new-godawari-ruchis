@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShoppingCart, Plus, Minus, ArrowLeft } from "lucide-react";
+import { ShoppingCart, Plus, Minus, ArrowLeft, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useStore } from "@/lib/store";
@@ -9,16 +9,15 @@ const Menu = () => {
   const navigate = useNavigate();
   const { menuItems, cart, addToCart, updateCartQuantity } = useStore();
 
-  const availableItems = menuItems.filter((m) => true); // show all, mark sold out
   const categories = useMemo(() => {
     const cats = new Map<string, typeof menuItems>();
-    availableItems.forEach((item) => {
+    menuItems.forEach((item) => {
       const cat = item.category || "Other";
       if (!cats.has(cat)) cats.set(cat, []);
       cats.get(cat)!.push(item);
     });
     return cats;
-  }, [availableItems]);
+  }, [menuItems]);
 
   const cartTotal = cart.reduce((s, c) => s + c.quantity, 0);
   const getCartQty = (id: string) => cart.find((c) => c.id === id)?.quantity || 0;
@@ -48,45 +47,65 @@ const Menu = () => {
                 return (
                   <div
                     key={item.id}
-                    className={`bg-card rounded-lg shadow-sm border border-border p-4 flex items-center justify-between gap-3 ${
+                    className={`bg-card rounded-lg shadow-sm border border-border p-3 flex items-center gap-3 ${
                       !item.isAvailable ? "opacity-50" : ""
                     }`}
                   >
+                    {/* Food Image */}
+                    <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-muted">
+                      {item.imageURL ? (
+                        <img
+                          src={item.imageURL}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <UtensilsCrossed className="w-8 h-8" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Details */}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-display font-semibold text-foreground text-sm truncate">
                         {item.name}
                       </h3>
                       <p className="text-primary font-bold text-base mt-0.5">₹{item.price}</p>
-                    </div>
-                    {!item.isAvailable ? (
-                      <Badge variant="secondary" className="bg-muted text-muted-foreground text-xs shrink-0">
-                        Sold Out
-                      </Badge>
-                    ) : qty === 0 ? (
-                      <Button
-                        size="sm"
-                        onClick={() => addToCart(item)}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 h-9 text-sm font-semibold shrink-0"
-                      >
-                        <Plus className="w-4 h-4 mr-1" /> Add
-                      </Button>
-                    ) : (
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => updateCartQuantity(item.id, qty - 1)}
-                          className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-foreground"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="font-display font-bold text-foreground w-5 text-center">{qty}</span>
-                        <button
-                          onClick={() => updateCartQuantity(item.id, qty + 1)}
-                          className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
+
+                      <div className="mt-2">
+                        {!item.isAvailable ? (
+                          <Badge variant="secondary" className="bg-muted text-muted-foreground text-xs">
+                            Sold Out
+                          </Badge>
+                        ) : qty === 0 ? (
+                          <Button
+                            size="sm"
+                            onClick={() => addToCart(item)}
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 h-8 text-xs font-semibold"
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Add
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateCartQuantity(item.id, qty - 1)}
+                              className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-foreground"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="font-display font-bold text-foreground w-5 text-center text-sm">{qty}</span>
+                            <button
+                              onClick={() => updateCartQuantity(item.id, qty + 1)}
+                              className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-primary-foreground"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}
