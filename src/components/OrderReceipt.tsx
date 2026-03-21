@@ -45,6 +45,7 @@ const OrderReceipt = ({ order, onClose }: Props) => {
     <div class="brand">Tastes of Godavari</div>
     <div class="order-id">${order.orderID}</div>
     <span class="badge ${isPaid ? 'badge-paid' : 'badge-pending'}">${isPaid ? 'PAID' : 'PENDING'}</span>
+    <div style="margin-top:8px;font-size:13px;color:#555;">📞 ${order.mobileNumber}</div>
   </div>
   <hr class="divider"/>
   ${order.items.map(item => `
