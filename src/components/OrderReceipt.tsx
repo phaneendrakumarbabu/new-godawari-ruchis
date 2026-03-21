@@ -89,6 +89,7 @@ const OrderReceipt = ({ order, onClose }: Props) => {
             <Clock className="w-16 h-16 text-warning mx-auto mb-3" />
           )}
           <h2 className="font-display text-xl font-bold text-foreground">{order.orderID}</h2>
+          <p className="text-sm text-muted-foreground mt-1">📞 {order.mobileNumber}</p>
           <div className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold ${
             isPaid
               ? "bg-success/10 text-success"
