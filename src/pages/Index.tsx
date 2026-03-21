@@ -10,11 +10,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Hero Section */}
-      <div className="relative h-64 overflow-hidden">
+      <div className="relative h-80 overflow-hidden">
         <img src={heroFood} alt="Delicious South Indian food spread" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-foreground/40 to-foreground/70" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <img src={logo} alt="Tastes of Godavari" className="w-40 h-40 object-contain drop-shadow-lg" />
+          <img src={logo} alt="Tastes of Godavari" className="w-64 h-64 object-contain drop-shadow-lg" />
         </div>
       </div>
 
