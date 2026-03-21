@@ -15,9 +15,10 @@ const OrderHistory = () => {
   const [results, setResults] = useState<Order[] | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!/^\d{10}$/.test(mobile)) return;
-    setResults(getOrdersByMobile(mobile));
+    const orders = await getOrdersByMobile(mobile);
+    setResults(orders);
   };
 
   if (selectedOrder) {
