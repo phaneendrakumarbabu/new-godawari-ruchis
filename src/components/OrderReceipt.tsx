@@ -45,6 +45,7 @@ const OrderReceipt = ({ order, onClose }: Props) => {
     <div class="brand">Tastes of Godavari</div>
     <div class="order-id">${order.orderID}</div>
     <span class="badge ${isPaid ? 'badge-paid' : 'badge-pending'}">${isPaid ? 'PAID' : 'PENDING'}</span>
+    <div style="margin-top:8px;font-size:13px;color:#555;">📞 ${order.mobileNumber}</div>
   </div>
   <hr class="divider"/>
   ${order.items.map(item => `
@@ -88,6 +89,7 @@ const OrderReceipt = ({ order, onClose }: Props) => {
             <Clock className="w-16 h-16 text-warning mx-auto mb-3" />
           )}
           <h2 className="font-display text-xl font-bold text-foreground">{order.orderID}</h2>
+          <p className="text-sm text-muted-foreground mt-1">📞 {order.mobileNumber}</p>
           <div className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold ${
             isPaid
               ? "bg-success/10 text-success"
