@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 import chickenBiryaniImg from "@/assets/food/chicken-biryani.jpg";
 import muttonBiryaniImg from "@/assets/food/mutton-biryani.jpg";
