@@ -6,39 +6,44 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-model Product {
+model MenuItem {
   id          String   @id @default(uuid())
   name        String
   price       Float
-  category    String
-  description String
-  imageUrl    String?
+  imageURL    String?
+  isAvailable Boolean  @default(true)
+  category    String   @default("Other")
+  description String?
+  isSpecial   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  OrderItem   OrderItem[]
+  orderItems  OrderItem[]
 }
 
 model Order {
-  id          String      @id @default(uuid())
-  customerId  String
-  totalAmount Float
-  status      String      @default("pending") // pending, processing, completed, cancelled
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  items       OrderItem[]
+  id            String      @id @default(uuid())
+  orderID       String      @unique // e.g. #TOG-01
+  mobileNumber  String
+  totalAmount   Float
+  paymentStatus String      @default("Pending") // Paid, Pending, Cash
+  orderStatus   String      @default("New") // New, Preparing, Completed
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  items         OrderItem[]
 }
 
 model OrderItem {
-  id        String  @id @default(uuid())
-  orderId   String
-  productId String
-  name      String
-  price     Float
-  quantity  Int
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  name       String   
+  price      Float    
+  quantity   Int
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
 }

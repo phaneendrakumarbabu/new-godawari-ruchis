@@ -47,12 +47,20 @@ const Index = () => {
             </Button>
           </div>
 
-          <button
-            onClick={() => navigate("/order-history")}
-            className="mt-6 w-full text-center text-sm text-primary font-medium hover:underline"
-          >
-            Track your order →
-          </button>
+          <div className="mt-6 flex flex-col gap-3">
+            <button
+              onClick={() => navigate("/track-order")}
+              className="w-full text-center text-sm text-primary font-medium hover:underline"
+            >
+              Track your order →
+            </button>
+            <button
+              onClick={() => navigate("/order-history")}
+              className="w-full text-center text-xs text-muted-foreground hover:underline"
+            >
+              View past orders
+            </button>
+          </div>
         </div>
       </div>
     </div>

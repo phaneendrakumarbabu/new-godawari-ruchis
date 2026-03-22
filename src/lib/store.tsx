@@ -18,6 +18,8 @@ export interface MenuItem {
   imageURL: string;
   isAvailable: boolean;
   category?: string;
+  description?: string;
+  isSpecial?: boolean;
 }
 
 export interface CartItem extends MenuItem {
@@ -39,16 +41,16 @@ export const getFoodImageURL = (name: string) =>
   `https://source.unsplash.com/400x400/?${encodeURIComponent(name + " indian food")}`;
 
 const DEFAULT_ITEMS: MenuItem[] = [
-  { id: "1", name: "Chicken Biryani", price: 180, imageURL: chickenBiryaniImg, isAvailable: true, category: "Biryani" },
-  { id: "2", name: "Mutton Biryani", price: 250, imageURL: muttonBiryaniImg, isAvailable: true, category: "Biryani" },
-  { id: "3", name: "Veg Biryani", price: 140, imageURL: vegBiryaniImg, isAvailable: true, category: "Biryani" },
-  { id: "4", name: "Masala Dosa", price: 80, imageURL: masalaDosaImg, isAvailable: true, category: "Tiffins" },
-  { id: "5", name: "Idli (2 pcs)", price: 50, imageURL: idliImg, isAvailable: true, category: "Tiffins" },
-  { id: "6", name: "Pesarattu", price: 70, imageURL: pesarattuImg, isAvailable: true, category: "Tiffins" },
-  { id: "7", name: "Chicken 65", price: 160, imageURL: chicken65Img, isAvailable: true, category: "Starters" },
-  { id: "8", name: "Paneer Tikka", price: 140, imageURL: paneerTikkaImg, isAvailable: true, category: "Starters" },
-  { id: "9", name: "Gulab Jamun (2 pcs)", price: 60, imageURL: gulabJamunImg, isAvailable: true, category: "Desserts" },
-  { id: "10", name: "Double Ka Meetha", price: 80, imageURL: doubleKaMeethaImg, isAvailable: true, category: "Desserts" },
+  { id: "1", name: "Chicken Biryani", price: 180, imageURL: chickenBiryaniImg, isAvailable: true, category: "Biryani", description: "Authentic dum biryani with tender chicken pieces.", isSpecial: true },
+  { id: "2", name: "Mutton Biryani", price: 250, imageURL: muttonBiryaniImg, isAvailable: true, category: "Biryani", description: "Rich and flavorful mutton biryani cooked to perfection." },
+  { id: "3", name: "Veg Biryani", price: 140, imageURL: vegBiryaniImg, isAvailable: true, category: "Biryani", description: "Aromatic basmati rice cooked with mixed vegetables." },
+  { id: "4", name: "Masala Dosa", price: 80, imageURL: masalaDosaImg, isAvailable: true, category: "Tiffins", description: "Crispy crepe filled with spiced potato mash." },
+  { id: "5", name: "Idli (2 pcs)", price: 50, imageURL: idliImg, isAvailable: true, category: "Tiffins", description: "Soft and fluffy steamed rice cakes." },
+  { id: "6", name: "Pesarattu", price: 70, imageURL: pesarattuImg, isAvailable: true, category: "Tiffins", description: "Nutritious green gram dosa, a local favorite." },
+  { id: "7", name: "Chicken 65", price: 160, imageURL: chicken65Img, isAvailable: true, category: "Starters", description: "Spicy, deep-fried chicken bites.", isSpecial: true },
+  { id: "8", name: "Paneer Tikka", price: 140, imageURL: paneerTikkaImg, isAvailable: true, category: "Starters", description: "Marinated paneer cubes grilled to perfection." },
+  { id: "9", name: "Gulab Jamun (2 pcs)", price: 60, imageURL: gulabJamunImg, isAvailable: true, category: "Desserts", description: "Sweet, melt-in-the-mouth Indian dessert." },
+  { id: "10", name: "Double Ka Meetha", price: 80, imageURL: doubleKaMeethaImg, isAvailable: true, category: "Desserts", description: "Traditional Hyderabadi bread pudding.", isSpecial: true },
 ];
 
 interface StoreContextType {
@@ -79,39 +81,47 @@ export const useStore = () => {
 let orderCounter = 1;
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
-    const saved = localStorage.getItem("tog-menu");
-    if (saved) {
-      const parsed = JSON.parse(saved) as MenuItem[];
-      // Re-map default item images from imports (localStorage can't store blob URLs)
-      const defaultMap = new Map(DEFAULT_ITEMS.map((d) => [d.id, d.imageURL]));
-      return parsed.map((item) => ({
-        ...item,
-        imageURL: defaultMap.get(item.id) || item.imageURL,
-      }));
-    }
-    return DEFAULT_ITEMS;
-  });
-
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(DEFAULT_ITEMS);
   const [cart, setCart] = useState<CartItem[]>([]);
-
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem("tog-orders");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      orderCounter = parsed.length + 1;
-      return parsed;
-    }
-    return [];
-  });
+  const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    localStorage.setItem("tog-menu", JSON.stringify(menuItems));
-  }, [menuItems]);
+    const fetchMenu = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/menu");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) setMenuItems(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch menu", e);
+      }
+    };
 
-  useEffect(() => {
-    localStorage.setItem("tog-orders", JSON.stringify(orders));
-  }, [orders]);
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/orders");
+        if (res.ok) {
+          const data = await res.json();
+          setOrders(data);
+          if (data.length > 0) {
+            const maxId = Math.max(...data.map((o: Order) => parseInt(o.orderID.replace(/\\D/g, "")) || 0));
+            orderCounter = maxId + 1;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch orders", e);
+      }
+    };
+
+    fetchMenu();
+    fetchOrders();
+
+    const interval = setInterval(fetchOrders, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+// Removing raw localStorage effects
 
   const addToCart = (item: MenuItem) => {
     setCart((prev) => {
@@ -141,8 +151,16 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       orderStatus: "New",
     };
     orderCounter++;
+    
     setOrders((prev) => [order, ...prev]);
     clearCart();
+
+    fetch("http://localhost:5000/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(order)
+    }).catch(console.error);
+
     return order;
   };
 
@@ -153,17 +171,36 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
 
   const addMenuItem = (item: Omit<MenuItem, "id">) => {
     const imageURL = item.imageURL || getFoodImageURL(item.name);
-    setMenuItems((prev) => [...prev, { ...item, imageURL, id: String(Date.now()) }]);
+    const newItem = { ...item, imageURL, id: String(Date.now()) };
+    setMenuItems((prev) => [...prev, newItem]);
+    
+    fetch("http://localhost:5000/api/menu", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newItem)
+    }).catch(console.error);
   };
 
   const deleteMenuItem = (itemId: string) =>
     setMenuItems((prev) => prev.filter((m) => m.id !== itemId));
 
-  const updateOrderStatus = (orderID: string, status: Order["orderStatus"]) =>
+  const updateOrderStatus = (orderID: string, status: Order["orderStatus"]) => {
     setOrders((prev) => prev.map((o) => o.orderID === orderID ? { ...o, orderStatus: status } : o));
+    fetch(`http://localhost:5000/api/orders/${encodeURIComponent(orderID)}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderStatus: status })
+    }).catch(console.error);
+  };
 
-  const markOrderPaid = (orderID: string) =>
+  const markOrderPaid = (orderID: string) => {
     setOrders((prev) => prev.map((o) => o.orderID === orderID ? { ...o, paymentStatus: "Paid" } : o));
+    fetch(`http://localhost:5000/api/orders/${encodeURIComponent(orderID)}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentStatus: "Paid" })
+    }).catch(console.error);
+  };
 
   return (
     <StoreContext.Provider value={{

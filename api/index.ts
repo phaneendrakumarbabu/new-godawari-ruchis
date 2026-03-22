@@ -12,41 +12,57 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Routes for Products
-app.get("/api/products", async (req, res) => {
+app.get("/", (req, res) => {
+  res.send("<h1>Godavari Orders API is running!</h1><p>The backend is working perfectly. Please open your Vite frontend (usually <b>http://localhost:5173</b>) to view the website.</p>");
+});
+
+// Routes for Menu
+app.get("/api/menu", async (req, res) => {
   try {
-    const products = await prisma.product.findMany({
+    const items = await prisma.menuItem.findMany({
       orderBy: { name: "asc" },
     });
-    res.json(products);
+    res.json(items);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch products" });
+    res.status(500).json({ error: "Failed to fetch menu items" });
   }
 });
 
-app.post("/api/products", async (req, res) => {
-  const { name, price, category, description, imageUrl } = req.body;
+app.post("/api/menu", async (req, res) => {
+  const { name, price, category, description, imageURL, isAvailable, isSpecial } = req.body;
   try {
-    const product = await prisma.product.create({
-      data: { name, price, category, description, imageUrl },
+    const item = await prisma.menuItem.create({
+      data: { name, price, category, description, imageURL, isAvailable, isSpecial },
     });
-    res.status(201).json(product);
+    res.status(201).json(item);
   } catch (error) {
-    res.status(500).json({ error: "Failed to create product" });
+    res.status(500).json({ error: "Failed to create menu item" });
   }
 });
 
 // Routes for Orders
 app.post("/api/orders", async (req, res) => {
-  const { customerId, items, totalAmount } = req.body;
+  let { orderID, mobileNumber, totalAmount, paymentStatus, orderStatus, items } = req.body;
   try {
+    if (!orderID) {
+      const lastOrder = await prisma.order.findFirst({ orderBy: { createdAt: "desc" } });
+      let nextId = 1;
+      if (lastOrder && lastOrder.orderID.startsWith("#TOG-")) {
+        nextId = (parseInt(lastOrder.orderID.replace(/\\D/g, "")) || 0) + 1;
+      }
+      orderID = `#TOG-${String(nextId).padStart(2, "0")}`;
+    }
+
     const order = await prisma.order.create({
       data: {
-        customerId,
+        orderID,
+        mobileNumber,
         totalAmount,
+        paymentStatus: paymentStatus || "Pending",
+        orderStatus: orderStatus || "New",
         items: {
           create: items.map((item: any) => ({
-            productId: item.productId,
+            menuItemId: item.id || item.menuItemId,
             name: item.name,
             price: item.price,
             quantity: item.quantity,
@@ -62,31 +78,33 @@ app.post("/api/orders", async (req, res) => {
   }
 });
 
-app.get("/api/orders/:customerId", async (req, res) => {
-  const { customerId } = req.params;
+app.get("/api/orders", async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
-      where: { customerId },
       include: { items: true },
       orderBy: { createdAt: "desc" },
     });
     res.json(orders);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch customer orders" });
+    res.status(500).json({ error: "Failed to fetch orders" });
   }
 });
 
-app.patch("/api/orders/:id/status", async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
+app.patch("/api/orders/:orderID/status", async (req, res) => {
+  const { orderID } = req.params;
+  const { orderStatus, paymentStatus } = req.body;
   try {
+    const data: any = {};
+    if (orderStatus) data.orderStatus = orderStatus;
+    if (paymentStatus) data.paymentStatus = paymentStatus;
+
     const order = await prisma.order.update({
-      where: { id },
-      data: { status },
+      where: { orderID },
+      data,
     });
     res.json(order);
   } catch (error) {
-    res.status(500).json({ error: "Failed to update order status" });
+    res.status(500).json({ error: "Failed to update order" });
   }
 });
 

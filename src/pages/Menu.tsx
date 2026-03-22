@@ -1,23 +1,28 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShoppingCart, Plus, Minus, ArrowLeft, UtensilsCrossed } from "lucide-react";
+import { ShoppingCart, Plus, Minus, ArrowLeft, UtensilsCrossed, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
 
 const Menu = () => {
   const navigate = useNavigate();
   const { menuItems, cart, addToCart, updateCartQuantity } = useStore();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const categories = useMemo(() => {
     const cats = new Map<string, typeof menuItems>();
     menuItems.forEach((item) => {
+      if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return;
+      }
       const cat = item.category || "Other";
       if (!cats.has(cat)) cats.set(cat, []);
       cats.get(cat)!.push(item);
     });
     return cats;
-  }, [menuItems]);
+  }, [menuItems, searchQuery]);
 
   const cartTotal = cart.reduce((s, c) => s + c.quantity, 0);
   const getCartQty = (id: string) => cart.find((c) => c.id === id)?.quantity || 0;
@@ -31,6 +36,19 @@ const Menu = () => {
         </button>
         <h1 className="font-display text-lg font-bold text-foreground">Our Menu</h1>
         <div className="w-5" />
+      </div>
+
+      {/* Search Bar */}
+      <div className="px-4 pt-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search for biryani, tiffins..."
+            className="pl-9 h-11 bg-card border-border rounded-xl"
+          />
+        </div>
       </div>
 
       {/* Categories */}
@@ -69,9 +87,21 @@ const Menu = () => {
 
                     {/* Details */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-display font-semibold text-foreground text-sm truncate">
-                        {item.name}
-                      </h3>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-display font-semibold text-foreground text-sm truncate">
+                          {item.name}
+                        </h3>
+                        {item.isSpecial && (
+                          <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 text-[10px] px-1.5 py-0 border-orange-500/20 whitespace-nowrap shrink-0">
+                            ⭐ Special
+                          </Badge>
+                        )}
+                      </div>
+                      {item.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 mb-1">
+                          {item.description}
+                        </p>
+                      )}
                       <p className="text-primary font-bold text-base mt-0.5">₹{item.price}</p>
 
                       <div className="mt-2">

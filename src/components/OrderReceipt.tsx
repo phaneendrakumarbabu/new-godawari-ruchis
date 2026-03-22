@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { CheckCircle, Clock, X, Download } from "lucide-react";
+import { CheckCircle, Clock, X, Download, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Order } from "@/lib/store";
 
@@ -11,6 +11,20 @@ interface Props {
 const OrderReceipt = ({ order, onClose }: Props) => {
   const isPaid = order.paymentStatus === "Paid";
   const receiptRef = useRef<HTMLDivElement>(null);
+
+  const handleWhatsAppShare = () => {
+    let text = `*New Order: ${order.orderID}*\\n`;
+    text += `Mobile: ${order.mobileNumber}\\n\\n`;
+    text += `*Items:*\\n`;
+    order.items.forEach(i => {
+      text += `- ${i.name} x${i.quantity} (₹${i.price * i.quantity})\\n`;
+    });
+    text += `\\n*Total:* ₹${order.totalAmount}\\n`;
+    text += `*Status:* ${isPaid ? "PAID" : "PENDING"}`;
+
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
+  };
 
   const handleDownload = () => {
     if (!receiptRef.current) return;
@@ -121,13 +135,22 @@ const OrderReceipt = ({ order, onClose }: Props) => {
 
         <div className="flex gap-2 mt-6">
           <Button
+            onClick={handleWhatsAppShare}
+            variant="outline"
+            className="flex-1 h-12 rounded-lg font-semibold gap-2 border-border text-foreground hover:bg-green-50 hover:text-green-600 hover:border-green-200"
+          >
+            <Share2 className="w-4 h-4" /> Share WA
+          </Button>
+          <Button
             onClick={handleDownload}
             variant="outline"
             className="flex-1 h-12 rounded-lg font-semibold gap-2 border-border text-foreground"
           >
-            <Download className="w-4 h-4" /> Download
+            <Download className="w-4 h-4" /> Save
           </Button>
-          <Button onClick={onClose} className="flex-1 h-12 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg font-semibold">
+        </div>
+        <div className="flex mt-2">
+          <Button onClick={onClose} className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg font-semibold">
             Done
           </Button>
         </div>

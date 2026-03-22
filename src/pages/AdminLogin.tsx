@@ -13,7 +13,7 @@ const AdminLogin = () => {
 
   const handleLogin = () => {
     if (password === ADMIN_PASSWORD) {
-      sessionStorage.setItem("tog-admin", "true");
+      sessionStorage.setItem("tog-admin", btoa(password + "-admin-token"));
       navigate("/admin");
     } else {
       toast.error("Incorrect password");

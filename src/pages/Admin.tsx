@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Plus, Trash2 } from "lucide-react";
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -19,12 +20,26 @@ const Admin = () => {
   const [newName, setNewName] = useState("");
   const [newPrice, setNewPrice] = useState("");
   const [newCategory, setNewCategory] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newIsSpecial, setNewIsSpecial] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem("tog-admin") !== "true") {
+    if (sessionStorage.getItem("tog-admin") !== btoa("godavari2024-admin-token")) {
       navigate("/admin-login");
     }
   }, [navigate]);
+
+  const prevOrdersLength = useRef(orders.length);
+
+  useEffect(() => {
+    if (orders.length > prevOrdersLength.current) {
+      const newOrder = orders[0];
+      toast.info(`New Order: ${newOrder.orderID}`, { duration: 5000 });
+      const audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+      audio.play().catch(() => {});
+    }
+    prevOrdersLength.current = orders.length;
+  }, [orders]);
 
   const handleAddItem = () => {
     if (!newName.trim() || !newPrice.trim()) {
@@ -42,10 +57,14 @@ const Admin = () => {
       imageURL: "",
       isAvailable: true,
       category: newCategory.trim() || "Other",
+      description: newDescription.trim() || undefined,
+      isSpecial: newIsSpecial,
     });
     setNewName("");
     setNewPrice("");
     setNewCategory("");
+    setNewDescription("");
+    setNewIsSpecial(false);
     toast.success("Item added!");
   };
 
@@ -75,8 +94,11 @@ const Admin = () => {
           <TabsTrigger value="inventory" className="flex-1 rounded-md font-display text-sm data-[state=active]:bg-card data-[state=active]:text-primary">
             Inventory
           </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex-1 rounded-md font-display text-sm data-[state=active]:bg-card data-[state=active]:text-primary hidden md:inline-flex">
+            Analytics
+          </TabsTrigger>
           <TabsTrigger value="add" className="flex-1 rounded-md font-display text-sm data-[state=active]:bg-card data-[state=active]:text-primary">
-            Add Item
+            Add
           </TabsTrigger>
         </TabsList>
 
@@ -171,9 +193,13 @@ const Admin = () => {
         {/* INVENTORY TAB */}
         <TabsContent value="inventory" className="space-y-3 mt-0">
           {menuItems.map((item) => (
-            <div key={item.id} className="bg-card rounded-lg border border-border p-4 flex items-center justify-between animate-fade-in">
-              <div className="flex-1 min-w-0 mr-3">
-                <h3 className="font-display font-semibold text-foreground text-sm truncate">{item.name}</h3>
+            <div key={item.id} className="bg-card rounded-lg border border-border p-4 flex items-center justify-between animate-fade-in relative overflow-hidden">
+              {item.isSpecial && <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500" />}
+              <div className="flex-1 min-w-0 mr-3 pl-2">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display font-semibold text-foreground text-sm truncate">{item.name}</h3>
+                  {item.isSpecial && <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 px-1 text-[9px] py-0 border-none">Special</Badge>}
+                </div>
                 <p className="text-xs text-muted-foreground">{item.category} · ₹{item.price}</p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
@@ -188,6 +214,34 @@ const Admin = () => {
               </div>
             </div>
           ))}
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-0">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Total Revenue</p>
+              <h3 className="text-xl font-bold text-foreground">₹{orders.reduce((sum, o) => sum + o.totalAmount, 0)}</h3>
+            </div>
+            <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Total Orders</p>
+              <h3 className="text-xl font-bold text-foreground">{orders.length}</h3>
+            </div>
+          </div>
+          
+          <div className="bg-card p-4 rounded-lg border border-border shadow-sm h-64">
+            <h3 className="text-xs font-medium text-muted-foreground mb-4">Orders by Status</h3>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={[
+                { name: "New", value: orders.filter(o => o.orderStatus === "New").length },
+                { name: "Prep", value: orders.filter(o => o.orderStatus === "Preparing").length },
+                { name: "Done", value: orders.filter(o => o.orderStatus === "Completed").length }
+              ]}>
+                <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px' }} />
+                <Bar dataKey="value" fill="#f97316" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </TabsContent>
 
         {/* ADD ITEM TAB */}
@@ -205,6 +259,14 @@ const Admin = () => {
             <div>
               <label className="text-sm font-medium text-foreground mb-1 block">Category</label>
               <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="e.g. Biryani, Starters" className="h-11 rounded-lg bg-background border-border" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1 block">Description (Optional)</label>
+              <Input value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="e.g. Authentic dum cooked..." className="h-11 rounded-lg bg-background border-border" />
+            </div>
+            <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-background/50">
+              <label htmlFor="special" className="text-sm font-medium text-foreground cursor-pointer">Mark as Special / Bestseller</label>
+              <Switch checked={newIsSpecial} onCheckedChange={setNewIsSpecial} id="special" />
             </div>
             <Button onClick={handleAddItem} className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg font-semibold gap-2">
               <Plus className="w-5 h-5" /> Add Item
